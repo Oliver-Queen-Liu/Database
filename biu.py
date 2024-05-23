@@ -1,7 +1,7 @@
 # 接收机，相当于本机（192.168.49.10，端口号为 5010）
 #，上行报文指接收机发送给上位机
 import tkinter as tk
-from threading import Thread
+from threading import Thread, Event
 import socket
 import time
 import random
@@ -240,6 +240,11 @@ class SendApp:
         # 创建发送按钮
         self.send_button = tk.Button(self.send_frame, text="发送", command=self.send_message)
         self.send_button.pack(side=tk.LEFT, pady=10)
+        self.loop_thread = Thread(target=self.loop)
+        self.stop_event = Event()
+        
+        self.stop_button = tk.Button(self.send_frame, text="停止", command=self.stop_message)
+        self.stop_button.pack(side=tk.LEFT, pady=10)
 
         # 接收区域
         self.recv_frame = tk.Frame(window)
@@ -258,26 +263,11 @@ class SendApp:
         self.thread.daemon = True
         self.thread.start()
 
-
     def send_message(self):
-        '''
-        msg = self.send_entry.get()
-        msg = msg.replace(" ", "")
-        if msg == "":
-            head = self.first_message_entry.get()
-            flow = self.flow_msg_entry.get()
-            times = self.actual_time_entry.get()
-            time_count = self.time_msg_entry.get()
-            types = self.type_msg_entry.get()
-            length = self.length_msg_entry.get()
-            data_get = self.data_msg_entry.get()
-            data = "".join(data_get.split(" "))
-            last = self.last_message_entry.get()
-            msg = head + flow + times + time_count + types + length + data + last
-        #发送数据
-        self.sk.sendto(msg.encode(), ("127.0.0.1", 8080))
-        time.sleep(1)
-        '''
+        self.loop_thread = Thread(target=self.loop)
+        self.loop_thread.start()
+
+    def loop(self):
 	# my message
         head = "58443341"
         last = "334441"		# getmessage[202:206]
@@ -306,12 +296,20 @@ class SendApp:
         direction = generate_random_course()
         data = data_id + user_id + IMO + call + boat_name + boat_type + boat_width + boat_length + ETA + now_steady_max_dep + destination + state + SOG + latitude + altitude + GOG + direction
         msg = head + flow + times + time_count + types + length + data + last
-
         counter = 0  # 初始化计数器
-        while counter < 10:  # 设置循环条件为发送次数小于10
+        while not self.stop_event.is_set():  # 设置循环条件为发送次数小于10
             self.sk.sendto(msg.encode(), ("127.0.0.1", 8080))  # 发送消息
             time.sleep(1)  # 暂停1秒
             counter += 1  # 增加发送次数计数器
+            print(counter)
+        
+    def stop_message(self):
+        self.stop_event.set()
+        self.loop_thread.join()
+        print("end")
+        self.stop_event.clear()
+        
+################################################################################################################################################################################################
 
     def receive_data(self):
         while True:
@@ -462,6 +460,7 @@ class SendApp:
             last_type = "错误类型:帧尾错误"
             self.recv_text.insert(tk.END, last_type + "\n")
             return
+
 
 
 
