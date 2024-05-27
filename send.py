@@ -1,172 +1,18 @@
 # 接收机，相当于本机（192.168.49.10，端口号为 5010）
 #，上行报文指接收机发送给上位机
+from getdata import *
 import tkinter as tk
-from threading import Thread, Event
+from threading import Thread,Timer
 import socket
 import time
-import random
-import string
-import uuid
-import binascii
-
-def generate_random_user_id():
-    # 生成一个随机的UUID
-    random_uuid = uuid.uuid4()
-    # 将UUID转换为十六进制字符串
-    hex_uuid = random_uuid.hex
-    # 取前10个字符（5字节）作为user_id
-    user_id = hex_uuid[:10].upper()
-    # 返回user_id的十六进制表示
-    return user_id
-
-
-def generate_random_imo_number(byte_length=4):
-    # 生成一个随机数，范围为0到2^32-1（四字节无符号整数的最大值）
-    random_value = random.randint(0, 2 ** 32 - 1)
-
-    # 将生成的随机数转换为16进制表示，并格式化为指定长度的字符串
-    # 使用format函数的'X'选项转换为大写16进制，zfill用于填充到指定的位数
-    hex_imo_number = format(random_value, 'X').zfill(byte_length * 2).upper()
-
-    return hex_imo_number
-
-
-def generate_random_call_sign(length=14):
-    # 定义16进制字符集
-    hex_chars = string.digits + 'ABCDEF'
-
-    # 随机选择字符集里的字符来生成呼号
-    call_sign = ''.join(random.choice(hex_chars) for _ in range(length))
-
-    return call_sign.upper()  # 转换为大写以符合常见的表示习惯
-
-
-def generate_random_hex_boat_name(length=40):
-    # 定义16进制字符集
-    hex_chars = string.digits + 'ABCDEF'
-
-    # 随机选择字符集里的字符来生成船名
-    boat_name = ''.join(random.choice(hex_chars) for _ in range(length))
-
-    return boat_name
-
-# 假设船舶宽度和长度的范围以及所需的位数
-min_width = 5  # 最小宽度，单位：米
-max_width = 20  # 最大宽度，单位：米
-width_digits = 4  # 宽度数值的位数
-
-min_length = 50  # 最小长度，单位：米
-max_length = 200  # 最大长度，单位：米
-length_digits = 4  # 长度数值的位数
-
-
-def generate_random_ship_dimension(min_value, max_value):
-    # 生成一个在指定范围内的随机数
-    random_value = random.randint(min_value, max_value)
-
-    # 将生成的随机数转换为4位16进制字符串，并确保字符串是大写的
-    hex_dimension = format(random_value, '04X').zfill(4).upper()
-
-    return hex_dimension
-
-
-def generate_random_eta():
-    # 生成随机的月、日、时、分
-    month = random.randint(1, 12)
-    day = random.randint(1, 31)
-    hour = random.randint(0, 23)
-    minute = random.randint(0, 59)
-
-    # 将生成的值格式化为16进制字符串，并拼接在一起
-    eta = f"{month:02X}{day:02X}{hour:02X}{minute:02X}"
-
-    return eta
-
-def generate_random_draught_str():
-    # 生成一个0到255之间的随机整数
-    random_draught = random.randint(0, 255)
-    # 将整数转换为两位数的16进制字符串，并确保字符串为大写
-    draught_str = format(random_draught, '02X')
-    return draught_str
-
-def generate_random_destination(length=40):
-    # 定义可用的字符集，这里使用大写字母和数字
-    char_set = string.ascii_uppercase + string.digits
-    # 使用random.choices随机选择length个字符
-    destination = ''.join(random.choices(char_set, k=length))
-    return destination
-
-
-def generate_random_SOG():
-    # 生成一个0到1022之间的随机整数
-    random_sog = random.randint(0, 1022)
-    # 将SOG转换为16进制表示，单位为0.1节
-    # 因为SOG的范围是0.1节，所以需要将随机整数乘以10
-    hex_sog = format(random_sog, '04X')  # 格式化为4位16进制数
-    return hex_sog.upper()  # 确保字母为大写
-
-
-def generate_random_latitude():
-    while True:
-        # 生成一个介于-90000到89999之间的随机整数
-        random_int = random.randint(-900000, 899999)
-        # 转换为16进制，并去掉前导的0xFF，如果存在的话
-        hex_latitude = format(abs(random_int), '08X')[2:].upper()
-        # 检查生成的16进制数是否以FF开头，若是则重新生成
-        if not hex_latitude.startswith('FF'):
-            break
-
-    # 根据随机整数的正负，构造最终的8位16进制字符串
-    if random_int < 0:
-        # 南纬，前面补上0xFF
-        hex_latitude = 'FF' + hex_latitude
-    else:
-        # 北纬，前面补上0x00
-        hex_latitude = '00' + hex_latitude
-
-    return hex_latitude
-
-
-def generate_random_longitude():
-    while True:
-        # 生成一个介于-180000到179999之间的随机整数
-        random_longitude = random.randint(-1800000, 1799999)
-        # 转换为16进制表示，去掉前导的0xFF（如果是西经）或0xFFFF（如果是无效值）
-        hex_longitude = format(abs(random_longitude), '08X')[2:].upper()
-        # 检查生成的16进制数是否以FF开头，若是则重新生成
-        if not hex_longitude.startswith('FF'):
-            break
-
-    # 根据随机整数的正负，构造最终的8位16进制字符串
-    if random_longitude >= 0:
-        # 东经，前面补上0x00
-        hex_longitude = '00' + hex_longitude
-    else:
-        # 西经，前面补上0xFF
-        hex_longitude = 'FF' + hex_longitude
-
-    return hex_longitude
-
-def generate_random_GOG():
-    # 生成一个介于0到3599之间的随机整数
-    random_GOG = random.randint(0, 3599)
-    # 转换为16进制表示，确保为4位数（两位字节）
-    hex_GOG = format(random_GOG, '04X').upper()
-    return hex_GOG
-
-
-def generate_random_course():
-    # 生成一个介于0到359之间的随机整数
-    random_course = random.randint(0, 359)
-    # 转换为16进制表示，确保为4位数（两位字节）
-    hex_course = format(random_course, '04X').upper()
-    # 返回去除前缀0x的16进制字符串
-    return hex_course
+from threading import Thread, Event
 
 class SendApp:
     def __init__(self, window):
         self.window = window
         self.window.title("模拟接收机，发上行报文，接收下行报文")
+        
+        
 
         # 创建发送区域的主框架
         self.send_frame = tk.Frame(window)
@@ -240,12 +86,11 @@ class SendApp:
         # 创建发送按钮
         self.send_button = tk.Button(self.send_frame, text="发送", command=self.send_message)
         self.send_button.pack(side=tk.LEFT, pady=10)
-        self.loop_thread = Thread(target=self.loop)
-        self.stop_event = Event()
-        
-        self.stop_button = tk.Button(self.send_frame, text="停止", command=self.stop_message)
+        # 添加停止按钮
+        self.stop_button = tk.Button(self.send_frame, text="停止", command=self.stop_sending_messages)
         self.stop_button.pack(side=tk.LEFT, pady=10)
-
+        # 初始化停止标志
+        self.stop_flag = False
         # 接收区域
         self.recv_frame = tk.Frame(window)
         self.recv_frame.pack(padx=10, pady=10)
@@ -263,53 +108,51 @@ class SendApp:
         self.thread.daemon = True
         self.thread.start()
 
+
+        # 启动定时发送ACARS和ADSB报文
+        self.start_sending_messages()
+        
+    def start_sending_messages(self):
+        # 发送ACARS报文
+        '''
+        acars_msg = get_ACARS_message()
+        self.sk.sendto(acars_msg.encode(), ("127.0.0.1", 8080))
+        # 发送ADSB报文
+        adsb_msg = get_ADSB_message()
+        self.sk.sendto(adsb_msg.encode(), ("127.0.0.1", 8080))
+        '''
+        if not self.stop_flag:
+            msg = get_Aero_message()
+            self.sk.sendto(msg.encode(), ("127.0.0.1", 8080))
+            # 设置定时器，每10秒发送一次
+            Timer(10, self.start_sending_messages).start()
+        #msg = get_Aero_message()
+        #self.sk.sendto(msg.encode(), ("127.0.0.1", 8080))
+        
+        # 设置定时器，每10秒发送一次
+        Timer(1, self.start_sending_messages).start()
+    
+    def stop_sending_messages(self):
+        # 设置停止标志为True，停止发送消息
+        self.stop_flag = True
+    
     def send_message(self):
-        self.loop_thread = Thread(target=self.loop)
-        self.loop_thread.start()
-
-    def loop(self):
-	# my message
-        head = "58443341"
-        last = "334441"		# getmessage[202:206]
-        flow = "00000000"  	# flow = flow + 1
-        times = "180501052013" 	# 16 + 8 = 24
-        time_count = "01020304"	#秒内计数器
-        types = random.choice(["01", "02"])		#船都是AIS信息，01 or 02
-        length = "0052"		# getmessage[38:42]
-
-        data_id = random.choice(["01", "02", "03", "05", "12", "24"])
-        user_id = generate_random_user_id()
-        IMO = generate_random_imo_number()
-        call = generate_random_call_sign()
-        boat_name = generate_random_hex_boat_name()
-        boat_type = random.choice(["00", "01", "02", "03","04", "05", "06", "07", "15", "20", "2B", "32", "33", "34", "35", "36", "37", "3A", "3B", "3C", "46", "50", "FF"])
-        boat_width = generate_random_ship_dimension(min_width, max_width)
-        boat_length = generate_random_ship_dimension(min_length, max_length)
-        ETA = generate_random_eta()
-        now_steady_max_dep = generate_random_draught_str()
-        destination = generate_random_destination()
-        state = random.choice(["00", "01", "02", "03","04", "05", "06", "07", "08", "15"])
-        SOG = generate_random_SOG()
-        latitude = generate_random_latitude()
-        altitude = generate_random_longitude()
-        GOG = generate_random_GOG()
-        direction = generate_random_course()
-        data = data_id + user_id + IMO + call + boat_name + boat_type + boat_width + boat_length + ETA + now_steady_max_dep + destination + state + SOG + latitude + altitude + GOG + direction
-        msg = head + flow + times + time_count + types + length + data + last
-        counter = 0  # 初始化计数器
-        while not self.stop_event.is_set():  # 设置循环条件为发送次数小于10
-            self.sk.sendto(msg.encode(), ("127.0.0.1", 8080))  # 发送消息
-            time.sleep(1)  # 暂停1秒
-            counter += 1  # 增加发送次数计数器
-            print(counter)
-        
-    def stop_message(self):
-        self.stop_event.set()
-        self.loop_thread.join()
-        print("end")
-        self.stop_event.clear()
-        
-################################################################################################################################################################################################
+        msg = self.send_entry.get()
+        msg = msg.replace(" ", "")
+        if msg == "":
+            head = self.first_message_entry.get()
+            flow = self.flow_msg_entry.get()
+            times = self.actual_time_entry.get()
+            time_count = self.time_msg_entry.get()
+            types = self.type_msg_entry.get()
+            length = self.length_msg_entry.get()
+            data_get = self.data_msg_entry.get()
+            data = "".join(data_get.split(" "))
+            last = self.last_message_entry.get()
+            msg = head + flow + times + time_count + types + length + data + last
+        #发送数据
+        self.sk.sendto(msg.encode(), ("127.0.0.1", 8080))
+        time.sleep(1)
 
     def receive_data(self):
         while True:
@@ -460,7 +303,6 @@ class SendApp:
             last_type = "错误类型:帧尾错误"
             self.recv_text.insert(tk.END, last_type + "\n")
             return
-
 
 
 

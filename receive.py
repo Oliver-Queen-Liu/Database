@@ -246,62 +246,58 @@ class ReceiveApp:
             elif getmessage[116:118] == "07":
                 jobs = "游艇"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "15":
+            elif getmessage[116:118] == "21":
                 jobs = "运载DG、HS或者MP、IMO危险品或X（2）类污染物"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "20":
+            elif getmessage[116:118] == "32":
                 jobs = "运载DG、HS或者MP、IMO危险品或Y（2）类污染物"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "2B":
+            elif getmessage[116:118] == "43":
                 jobs = "运载DG、HS或者MP、IMO危险品或Z（2）类污染物"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "32":
+            elif getmessage[116:118] == "50":
                 jobs = "引航船舶"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "33":
+            elif getmessage[116:118] == "51":
                 jobs = "搜救船舶"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "34":
+            elif getmessage[116:118] == "52":
                 jobs = "拖轮"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "35":
+            elif getmessage[116:118] == "53":
                 jobs = "港口补给船"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "36":
+            elif getmessage[116:118] == "54":
                 jobs = "安装有防污染设施或设备的船舶"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "37":
+            elif getmessage[116:118] == "55":
                 jobs = "执法船舶"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "3A":
+            elif getmessage[116:118] == "58":
                 jobs = "医疗运输船舶"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "3B":
+            elif getmessage[116:118] == "59":
                 jobs = "非武装冲突参与国的船舶和航空器"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "3C":
+            elif getmessage[116:118] == "60":
                 jobs = "客轮"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "46":
+            elif getmessage[116:118] == "70":
                 jobs = "货轮"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
-            elif getmessage[116:118] == "50":
+            elif getmessage[116:118] == "80":
                 jobs = "油轮"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
             else:
                 jobs = "错误"
                 self.recv_text.insert(tk.END, "船舶和货物类型：" + jobs + "\n")
 
-            # 将16进制字符串转换为10进制数值
-            ship_width_hex = getmessage[118:122]
-            ship_length_hex = getmessage[122:126]
 
-            ship_width_dec = int(ship_width_hex, 16)  # 转换宽度为10进制
-            ship_length_dec = int(ship_length_hex, 16)  # 转换长度为10进制
+            # 船舶宽度
+            self.recv_text.insert(tk.END, "船舶宽度：" + getmessage[118:122] + "\n")
 
-            # 现在你可以将这些10进制的数值插入到文本中
-            self.recv_text.insert(tk.END, "船舶宽度：" + str(ship_width_dec) + "\n")
-            self.recv_text.insert(tk.END, "船舶长度：" + str(ship_length_dec) + "\n")
+            # 船舶长度
+            self.recv_text.insert(tk.END, "船舶长度：" + getmessage[122:126] + "\n")
 
             #预计到达时间
             month = int(getmessage[126:128], 16)
@@ -365,24 +361,26 @@ class ReceiveApp:
             if get_longitude[0:3] == "FFFF":
                 longitude = "无效"
             else:
-                get_longitude = getmessage[184:190]
-                if (getmessage[182:184] =="FF"):
+                byte_string = bytes.fromhex(get_longitude)
+                longitude = int.from_bytes(byte_string, byteorder='little', signed=True)
+                if (longitude < 0):
                     long_tag = "南纬: "
-                    longitude = str((int(get_longitude,16)) / 10000)
+                    longitude = str((0 - longitude) / 10000)
                 else:
                     long_tag = "北纬: "
-                    longitude = str((int(get_longitude,16)) / 10000)
+                    longitude = str((longitude) / 10000)
             get_latitude = getmessage[190:198]
             if get_latitude[0:3] == "FFFF":
                 latitude = "无效"
             else:
-                get_latitude = getmessage[192:198]
-                if (getmessage[190:192] =="FF"):
+                byte_string = bytes.fromhex(get_latitude)
+                latitude = int.from_bytes(byte_string, byteorder='little', signed=True)
+                if (latitude < 0):
                     lat_tag = " 西经: "
-                    latitude = str((int(get_latitude,16)) / 10000)
+                    latitude = str((0 - latitude) / 10000)
                 else:
                     lat_tag = " 东经:"
-                    latitude = str((int(get_latitude,16)) / 10000)
+                    latitude = str((latitude) / 10000)
             if (longitude == "无效" or latitude == "无效"):
                 self.recv_text.insert(tk.END, "无效位置\n")
             else:
